@@ -392,12 +392,14 @@ static NSString* toBase64(NSData* data) {
     NSString* docsPath = [NSTemporaryDirectory()stringByStandardizingPath];
     NSFileManager* fileMgr = [[NSFileManager alloc] init]; // recommended by Apple (vs [NSFileManager defaultManager]) to be threadsafe
     NSString* filePath;
+	NSString* tmpFilePath;
     
     // generate unique file name
     int i = 1;
     do {
-        filePath = [NSString stringWithFormat:@"%@/%@%03d.%@", docsPath, CDV_PHOTO_PREFIX, i++, extension];
-    } while ([fileMgr fileExistsAtPath:filePath]);
+        filePath = [NSString stringWithFormat:@"%@/%@%03d", docsPath, CDV_PHOTO_PREFIX, i++];
+		tmpFilePath = [NSString stringWithFormat:@"%@/%@%03d%@", docsPath, CDV_PHOTO_PREFIX, i - 1, extension];
+    } while ([fileMgr fileExistsAtPath:tmpFilePath]);
     
     return filePath;
 }
@@ -435,6 +437,7 @@ static NSString* toBase64(NSData* data) {
     CDVPluginResult* result = nil;
     BOOL saveToPhotoAlbum = options.saveToPhotoAlbum;
     UIImage* image = nil;
+	UIImage* image_t = nil;
 
     switch (options.destinationType) {
         case DestinationTypeNativeUri:
@@ -465,19 +468,30 @@ static NSString* toBase64(NSData* data) {
             break;
         case DestinationTypeFileUri:
         {
-            image = [self retrieveImage:info options:options];
-            NSData* data = [self processImage:image info:info options:options];
-            if (data) {
+			options.targetSize = CGSizeMake(200, 200);
+            image_t = [self retrieveImage:info options:options];
+			
+            NSData* data_t = [self processImage:image_t info:info options:options];
+            if (data_t) {
                 
-                NSString* extension = options.encodingType == EncodingTypePNG? @"png" : @"jpg";
-                NSString* filePath = [self tempFilePath:extension];
+                NSString* extension = options.encodingType == EncodingTypePNG? @".png" : @".jpg";
+                NSString* filePathWithoutExtension = [self tempFilePath:extension];
+				NSString* filePath = [NSString stringWithFormat:@"%@%@", filePathWithoutExtension, extension];
+				NSString* filePath_t = [NSString stringWithFormat:@"%@_t%@", filePathWithoutExtension, extension];
                 NSError* err = nil;
                 
                 // save file
-                if (![data writeToFile:filePath options:NSAtomicWrite error:&err]) {
+                if (![data_t writeToFile:filePath_t options:NSAtomicWrite error:&err]) {
                     result = [CDVPluginResult resultWithStatus:CDVCommandStatus_IO_EXCEPTION messageAsString:[err localizedDescription]];
                 } else {
-                    result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:[[self urlTransformer:[NSURL fileURLWithPath:filePath]] absoluteString]];
+					options.targetSize = CGSizeMake(0, 0);
+					image = [self retrieveImage:info options:options];
+					NSData* data = [self processImage:image info:info options:options];
+					if (![data writeToFile:filePath options:NSAtomicWrite error:&err]) {
+						result = [CDVPluginResult resultWithStatus:CDVCommandStatus_IO_EXCEPTION messageAsString:[err localizedDescription]];
+					} else {
+						result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:[[self urlTransformer:[NSURL fileURLWithPath:filePath]] absoluteString]];
+					}
                 }
             }
         }
@@ -679,8 +693,9 @@ static NSString* toBase64(NSData* data) {
         case DestinationTypeFileUri:
         {
             NSError* err = nil;
-            NSString* extension = self.pickerController.pictureOptions.encodingType == EncodingTypePNG ? @"png":@"jpg";
-            NSString* filePath = [self tempFilePath:extension];
+            NSString* extension = self.pickerController.pictureOptions.encodingType == EncodingTypePNG ? @".png":@".jpg";
+            NSString* filePathWithoutExtension = [self tempFilePath:extension];
+			NSString* filePath = [NSString stringWithFormat:@"%@%@", filePathWithoutExtension, extension];
             
             // save file
             if (![self.data writeToFile:filePath options:NSAtomicWrite error:&err]) {
