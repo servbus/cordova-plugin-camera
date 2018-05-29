@@ -150,12 +150,12 @@
          <framework src="CoreGraphics.framework" />
          <framework src="AVFoundation.framework" />
 
-         <preference name="CAMERA_USAGE_DESCRIPTION" default=" " />
+         <preference name="CAMERA_USAGE_DESCRIPTION" default="需要您的相机扫描二维码或拍摄影像资料" />
          <config-file target="*-Info.plist" parent="NSCameraUsageDescription">
              <string>$CAMERA_USAGE_DESCRIPTION</string>
          </config-file>
 
-         <preference name="PHOTOLIBRARY_USAGE_DESCRIPTION" default=" " />
+         <preference name="PHOTOLIBRARY_USAGE_DESCRIPTION" default="需要从您的相册中读取影像资料" />
          <config-file target="*-Info.plist" parent="NSPhotoLibraryUsageDescription">
              <string>$PHOTOLIBRARY_USAGE_DESCRIPTION</string>
          </config-file>
