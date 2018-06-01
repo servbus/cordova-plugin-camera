@@ -150,6 +150,11 @@
          <framework src="CoreGraphics.framework" />
          <framework src="AVFoundation.framework" />
 
+         <preference name="PHOTOLIBRARY_ADD_USAGE_DESCRIPTION" default="需要您允许，才能将拍摄或系统中的图片保存到您的相册中" />
+         <config-file target="*-Info.plist" parent="NSPhotoLibraryAddUsageDescription">
+           <string>$PHOTOLIBRARY_ADD_USAGE_DESCRIPTION</string>
+         </config-file>
+		 
          <preference name="CAMERA_USAGE_DESCRIPTION" default="需要您的相机扫描二维码或拍摄影像资料" />
          <config-file target="*-Info.plist" parent="NSCameraUsageDescription">
              <string>$CAMERA_USAGE_DESCRIPTION</string>
