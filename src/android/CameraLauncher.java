@@ -561,7 +561,10 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                     this.callbackContext.success(uri.toString());
                 }
             } else {
-                Uri uri = Uri.fromFile(createCaptureFile(this.encodingType, System.currentTimeMillis() + ""));
+                String fileName = System.currentTimeMillis() + "";
+                String fileName_t = fileName + "_t";
+                Uri uri = Uri.fromFile(createCaptureFile(this.encodingType, fileName));
+                Uri uri_t = Uri.fromFile(createCaptureFile(this.encodingType, fileName_t));
                 bitmap = getScaledAndRotatedBitmap(sourcePath);
 
                 // Double-check the bitmap.
@@ -591,7 +594,10 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                     exif.createOutFile(exifPath);
                     exif.writeExifData();
                 }
-
+                bitmap = getScaledBitmap(uri.toString(),200);
+                os = this.cordova.getActivity().getContentResolver().openOutputStream(uri_t);
+                bitmap.compress(compressFormat, 80, os);
+                os.close();
                 // Send Uri back to JavaScript for viewing image
                 this.callbackContext.success(uri.toString());
 
@@ -602,6 +608,59 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
 
         this.cleanup(FILE_URI, this.imageUri.getFileUri(), galleryUri, bitmap);
         bitmap = null;
+    }
+
+    /**
+     * Return a scaled bitmap based on the target width and height
+     *
+     * @param imageUrl
+     * @param edgeLength
+     * @return
+     * @throws IOException
+     */
+    private Bitmap getScaledBitmap(String imageUrl,int edgeLength) throws IOException {
+
+        InputStream fileStream = FileHelper.getInputStreamFromUriString(imageUrl, cordova);
+        Bitmap bitmap = BitmapFactory.decodeStream(fileStream);
+
+        if(null == bitmap || edgeLength <= 0)
+        {
+            return  null;
+        }
+
+        Bitmap result = bitmap;
+        int widthOrg = bitmap.getWidth();
+        int heightOrg = bitmap.getHeight();
+
+        if(widthOrg > edgeLength && heightOrg > edgeLength)
+        {
+            //压缩到一个最小长度是edgeLength的bitmap
+            int longerEdge = (int)(edgeLength * Math.max(widthOrg, heightOrg) / Math.min(widthOrg, heightOrg));
+            int scaledWidth = widthOrg > heightOrg ? longerEdge : edgeLength;
+            int scaledHeight = widthOrg > heightOrg ? edgeLength : longerEdge;
+            Bitmap scaledBitmap;
+
+            try{
+                scaledBitmap = Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true);
+            }
+            catch(Exception e){
+                return null;
+            }
+
+            //从图中截取正中间的正方形部分。
+            int xTopLeft = (scaledWidth - edgeLength) / 2;
+            int yTopLeft = (scaledHeight - edgeLength) / 2;
+
+            try{
+                result = Bitmap.createBitmap(scaledBitmap, xTopLeft, yTopLeft, edgeLength, edgeLength);
+                scaledBitmap.recycle();
+            }
+            catch(Exception e){
+                return null;
+            }
+        }
+
+        return result;
     }
 
     private String getPicturesPath() {
